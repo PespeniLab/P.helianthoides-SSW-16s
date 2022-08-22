@@ -1,0 +1,196 @@
+Seastar Wasting. Pichnopodia Helianthoides (Sunflower Sea Sar)
+
+/data/project_data/superss
+
+conda activate qiime2-2021.8
+export TMPDIR="/data/project_data/16S/tmptmpdir"
+echo $TMPDIR 
+
+###import Data: Using the Full Dataser (subset available)
+qiime tools import \
+  --type 'SampleData[PairedEndSequencesWithQuality]' \
+  --input-path /data/project_data/16S/pyc_manifest \
+  --input-format PairedEndFastqManifestPhred33V2 \
+  --output-path demux-paired-end_full.qza
+  
+###Generate summary plots on the data quality!
+qiime demux summarize \
+  --i-data demux-paired-end_full.qza \         
+  --o-visualization demux-pyc-full.qzv
+  
+##Data-2 denoising stats
+### DATA-2 --> run in seperate sheet
+### Reads were trimmed visually based off of Quality score roughtly >30 for majority of samples
+
+qiime dada2 denoise-paired \
+  --i-demultiplexed-seqs demux-paired-end_full.qza \
+  --p-n-threads 4 \
+  --p-trim-left-f 16 \
+  --p-trim-left-r 0 \
+  --p-trunc-len-f 289 \
+  --p-trunc-len-r 257 \
+  --o-table table.qza \
+  --o-representative-sequences rep-seqs.qza \
+  --o-denoising-stats denoising-stats.qza
+  
+ 
+###analyzing table.qzv: 
+'number of samples: 85
+number of feaures (ASVs) 5992
+frequency: how often a taxa ASV is present in the samples'
+
+qiime feature-table summarize \
+  --i-table table.qza \
+  --o-visualization table.qzv \
+  --m-sample-metadata-file /data/project_data/16S/pyc_manifest
+
+qiime feature-table tabulate-seqs \
+  --i-data rep-seqs.qza \
+  --o-visualization rep-seqs.qzv
+
+qiime metadata tabulate \
+  --m-input-file denoising-stats.qza \
+  --o-visualization denoising-stats.qzv
+
+
+###Calculating Alpha and Beta diversity: Build a phylogenetic tree using - qiime phylogeny align-to-tree-mafft-fasttree
+
+qiime phylogeny align-to-tree-mafft-fasttree \
+  --i-sequences rep-seqs.qza \
+  --o-alignment aligned-rep-seqs.qza \
+  --o-masked-alignment masked-aligned-rep-seqs.qza \
+  --o-tree unrooted-tree.qza \
+  --o-rooted-tree rooted-tree.qza
+
+
+### The next command calculates a whole suite of alpha and beta-diversity metrics!
+## 13547 was picked to include ALL data without loosing any samples
+
+qiime diversity core-metrics-phylogenetic \
+  --i-phylogeny rooted-tree.qza \
+  --i-table table.qza \
+  --p-sampling-depth 13547 \
+  --m-metadata-file /data/project_data/16S/pyc_manifest \
+  --output-dir core-metrics-results
+
+
+## Test for associations between categorical metadata columns and alpha diversity data. We’ll do that here for the Faith Phylogenetic Diversity (a measure of community richness) and evenness metrics.
+  
+qiime diversity alpha-group-significance \
+  --i-alpha-diversity core-metrics-results/faith_pd_vector.qza \
+  --m-metadata-file /data/project_data/16S/pyc_manifest \
+  --o-visualization core-metrics-results/faith-pd-group-significance.qzv
+
+qiime diversity alpha-group-significance \
+  --i-alpha-diversity core-metrics-results/evenness_vector.qza \
+  --m-metadata-file /data/project_data/16S/pyc_manifest \
+  --o-visualization core-metrics-results/evenness-group-significance.qzv
+
+qiime diversity alpha-group-significance \
+  --i-alpha-diversity core-metrics-results/shannon_vector.qza \
+  --m-metadata-file /data/project_data/16S/pyc_manifest \
+  --o-visualization core-metrics-results/shannon_vector.qzv
+
+
+###Test for differences in beta diversity between groups:
+
+qiime diversity beta-group-significance \
+  --i-distance-matrix core-metrics-results/weighted_unifrac_distance_matrix.qza \
+  --m-metadata-file /data/project_data/16S/pyc_manifest \
+  --m-metadata-column site-animal-health \
+  --o-visualization core-metrics-results/weighted-unifrac-site-animal-health-significance.qzv \
+  --p-pairwise
+
+qiime diversity beta-group-significance \
+  --i-distance-matrix core-metrics-results/weighted_unifrac_distance_matrix.qza \
+  --m-metadata-file /data/project_data/16S/pyc_manifest \
+  --m-metadata-column site-status \
+  --o-visualization core-metrics-results/weighted-unifrac-site-status-group-significance.qzv \
+  --p-pairwise
+
+
+### Alpha diversity rarefaction plot!
+qiime diversity alpha-rarefaction \
+  --i-table table.qza \
+  --i-phylogeny rooted-tree.qza \
+  --p-max-depth 100000 \
+  --m-metadata-file /data/project_data/16S/pyc_manifest \
+  --o-visualization alpha-rarefaction.qzv
+
+
+### Assign Taxonomy using Greengenes Database 
+# creating reference sequences from OTUs that have been classified by Greengenes
+# import reference data from greengenes database
+
+qiime tools import \
+  --type 'FeatureData[Sequence]' \
+  --input-path /data/project_data/16S/training-feature-classifiers/gg_13_8_otus/rep_set/99_otus.fasta \
+  --output-path /data/project_data/16S/training-feature-classifiers/99_otus.qza
+
+qiime tools import \
+  --type 'FeatureData[Taxonomy]' \
+  --input-format HeaderlessTSVTaxonomyFormat \
+  --input-path /data/project_data/16S/training-feature-classifiers/gg_13_8_otus/taxonomy/99_otu_taxonomy.txt \
+  --output-path /data/project_data/16S/training-feature-classifiers/ref-taxonomy.qza
+
+
+# reference sequences: minimul length kept 100bp, shouldnt be longer than 500bp. 
+# Trims it to what we usee to match our taxon reads making reference seq files
+
+qiime feature-classifier extract-reads \
+  --i-sequences 99_otus.qza \
+  --p-f-primer CCTACGGGNGGCWGCAG \
+  --p-r-primer GACTACHVGGGTATCTAATCC \
+  --p-min-length 100 \
+  --p-max-length 500 \
+  --o-reads ref-seqs.qza
+  
+# Train our classifier 
+qiime feature-classifier fit-classifier-naive-bayes \
+  --i-reference-reads ref-seqs.qza \
+  --i-reference-taxonomy ref-taxonomy.qza \
+  --o-classifier classifier.qza
+  
+# test the classifier - start here when using different subsets of data
+qiime feature-classifier classify-sklearn \
+  --i-classifier /data/project_data/16S/training-feature-classifiers/classifier.qza \
+  --i-reads ~/myresults/rep-seqs.qza \
+  --o-classification taxonomy.qza
+
+qiime metadata tabulate \
+  --m-input-file taxonomy.qza \
+  --o-visualization taxonomy.qzv 
+
+
+### Make Bar Plots of Taxa! (actual bar plots in manuscript coded using ggplot in R)
+
+qiime taxa barplot \
+  --i-table ~/myresults/table.qza \
+  --i-taxonomy ~/myresults/taxonomy.qza \
+  --m-metadata-file /data/project_data/16S/pyc_manifest \
+  --o-visualization taxa-bar-plots.qzv
+
+
+### (PICRUSt2) Phylogenetic Investigation of Communities by Reconstruction of Unobserved States version 2 
+#Convert table.qza to a .biom file for PICRUSt2 input. 
+
+qiime tools export \
+  feature-table.qza \
+  --output-dir feature-table.biom
+ 
+conda activate picrust2
+picrust2_pipeline.py -s 1117sswd.fna -i feature-table.biom -o picrust2_out_pipeline -p 1
+
+#Download output files (.tsv) for KEGG orthology, EC numbers, and inferred pathways and visualize using Morpheus web tool (https://software.broadinstitute.org/morpheus/)
+
+
+### collapsing ASVs to Observabe Taxonomic units (OTU) by Greenegene classification
+### ASVs collapsed to level-7 (species level) as the lowest level of identification by greengenes
+
+qiime taxa collapse \
+  --i-table table.qza \
+  --i-taxonomy taxonomy.qza \
+  --p-level 7 \
+  --o-collapsed-table table-lev7.qza
+
+### table-lev7.qza used to calculate differential taxa abundance using ANCOM-BC in R 
