@@ -11,42 +11,47 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-
 ### P.helianthoides SSW 16s microbial analysis  
-____________
 
 This repository holds script used to analyse the 16s rRNA sequences from tissue samples of healthy, exposed, and actively wasting Pycnopodia helianthoides 
 
-#### Data Availability  
-____________  
-Made public once preprint is posted  
+
+____________   
+
+#### Data Availability    
+
+Made public once preprint is posted    
   
+____________   
 
 #### Scripts  
-____________  
+ 
+below is a description of the scripts used in the analysis
 
-below is a description of the scrpits used in the analysis
+##### Sequence pre-processing and taxa identification   
 
-##### Sequence pre-processing and taxa identification
-`AK_SSW_Qiime2` text file containing annotated code for shell commands for running Qiime2 pipeline for sequence cleaning/trimming, diversity metrics, taxonomic assignment, as well as script for running picrust-2  
+* `AK_SSW_Qiime2` text file containing annotated code for shell commands for running Qiime2 pipeline for sequence cleaning/trimming, diversity metrics, taxonomic assignment, as well as script for running picrust-2    
 
-`ASV Sequence to Taxa ID` contains code for mapping taxonomic assignment back to ASV sequences  
+* `ASV Sequence to Taxa ID` contains code for mapping taxonomic assignment back to ASV sequences  
 
-`ggplot_taxa_bar_plot` plots for taxa relative abundances based on Greenegenes taxonomic assignment  
-
-
-##### Analysis of Composition of Microbiomes with Bias Correction (ANCOM-BC)
-`ANCOM-BC_lev-7_Species` contains code to compare microbial composition between site-health status: Naive vs Exposed | Exposed vs Wasting. Additional code for ven-diagram for number of enriched and depleted taxa.  
+* `ggplot_taxa_bar_plot` plots for taxa relative abundances based on Greenegenes taxonomic assignment   
 
 
-##### Picrust-2 pathway analysis
-`Pathways1_average picrust pathways_KO by site-health` calculating average Metacyc pathway and KO enrichment based on animal site-health status (Naive, Exposed, Wasting)
+##### Analysis of Composition of Microbiomes with Bias Correction (ANCOM-BC)   
+  
+* `ANCOM-BC_lev-7_Species` contains code to compare microbial composition between site-health status: Naive vs Exposed | Exposed vs Wasting. Additional code for ven-diagram for number of enriched and depleted taxa.  
 
-`Pathways2_Brite ID for KO terms` mapping KO number to Brite hierarchies for biological function
 
-`Pathways3_KO_Brite_Plots` plots for Brite hierarchies  
+##### Picrust-2 pathway analysis   
 
-##### Bayesian stochastic blockmodeling
+* `Pathways1_average picrust pathways_KO by site-health` calculating average Metacyc pathway and KO enrichment based on animal site-health status (Naive, Exposed, Wasting)
+
+* `Pathways2_Brite ID for KO terms` mapping KO number to Brite hierarchies for biological function
+
+* `Pathways3_KO_Brite_Plots` plots for Brite hierarchies  
+
+##### Bayesian stochastic blockmodeling   
+
 
 
 
