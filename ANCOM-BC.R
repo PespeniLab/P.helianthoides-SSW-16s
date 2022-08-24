@@ -12,7 +12,8 @@ library(kableExtra)
 getwd()
 setwd("C:/Users/andre/Desktop/Pespeni Lab/SSWD Pycnopodia 16s Networks Manuscript")
 
-physeq_fam<-qza_to_phyloseq(
+#Use table.qza for differential ASVs and table-lev7.qza for ASVs collapse to species
+physeq<-qza_to_phyloseq(
   features="table-lev7.qza",
   tree=,
   taxonomy=,
@@ -25,10 +26,10 @@ Manifest <- read.table("pyc_manifest.txt", header = TRUE, row.names = 1)
 ### Subsisting the files for pairwise analysis of differential abundance ###
 
 #Subset samples, just healthy animals (inclusive of Naive and Exposed samples)
-pseq_healthy <- subset_samples(physeq_fam, animal.health == "healthy")
+pseq_healthy <- subset_samples(physeq, animal.health == "healthy")
 
 #Subset samples, just impacted sites (inclusive of Exposed and Wasting samples)
-pseq_impacted <- subset_samples(physeq_fam, site.status == "impacted")
+pseq_impacted <- subset_samples(physeq, site.status == "impacted")
 
 
 
