@@ -115,17 +115,29 @@ class seastar_hsbm():
             self.__dict__.update(obj.__dict__)
 
     def plot(self, path):
-        part = self.g.vp.part
         counts = self.g.ep.counts
-        self.state.draw(
-            layout="bipartite", output=path, subsample_edges=1000, hshortcuts=1, 
+        ord = self.g.new_vertex_property("int", self.state.project_level(2).get_blocks().a)
+        blue = list(matplotlib.colors.ColorConverter().to_rgba("#729fcf"))
+        blue[-1] = 0.8
+
+        draw_hierarchy(
+            self.state,
+            layout="bipartite", output=path, subsample_edges=400, hshortcuts=1, 
             # edge_pen_width=prop_to_size(g.ep.counts, ma=4, power=1.2, log=False), 
             edge_pen_width=1.5,
-            vertex_size=1.6,
-            vertex_fill_color=part,
-            vertex_color=part,
+            vertex_size=1.8,
+            hvertex_size = 6.5,
+            # vertex_fill_color=[0.6, 0.6, 0.6, 0.7],
+            # vertex_color=[0.6, 0.6, 0.6, 0.7],
+            vertex_fill_color=ord,
+            vertex_color=ord,
+            hvertex_color=[1, 1, 1, 0.4],
+            hedge_color = blue,
+            hvertex_fill_color = blue,
+            # vertex_text=text,
+            # vertex_text_offset=[-0.05, 0.0],
             edge_color=prop_to_size(counts, ma=10, power=1),
-            ecmap=(matplotlib.cm.inferno, .4), edge_gradient=[], eorder=counts
+            ecmap=(matplotlib.cm.inferno, 0.4), edge_gradient=[], eorder=counts
         )
 
 

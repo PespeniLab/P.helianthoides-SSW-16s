@@ -1,6 +1,47 @@
 library(tidyverse)
-library(tikzDevice)
 
+# Methods to convert Python results dictionary to a dataframe---------------------
+tidy_level <- function(lblocks, lvl) tibble(level=as.integer(lvl), get_level_df(lblocks))
+
+get_block_types <- function(block) ifelse(str_detect(block, "k__"), "🦠", "⭐")
+
+get_level_df <- function(lblocks) {
+    imap_dfr(lblocks, ~tibble(block=.y, type=get_block_types(.x), label=.x))
+}
+
+# Methods to extract the sub-abundance matrix for pairs of blocks-----------------
+block_pair_communities <- function(hdf, slevel=3, olevel=3, sblocks=NULL, oblocks=NULL) {
+    if (is.null(sblocks))
+        spred <- expression(level == slevel & type == "⭐")
+    else 
+        spred <- expression(level == slevel & type == "⭐" & block %in% sblocks)
+    if (is.null(oblocks))
+        opred <- expression(level == olevel & type == "🦠")
+    else 
+        opred <- expression(level == olevel & type == "🦠" & block %in% oblocks)
+    
+    hdf_nest <- hdf |>
+        filter(eval(spred) | eval(opred)) |>
+        nest(labels=c(label))
+    
+    left_join(hdf_nest, hdf_nest, by=character()) |>
+        filter(block.x != block.y, type.x != type.y, type.x == "⭐") |>
+        transmute(block_star=block.x, block_otu=block.y, sub_comm=map2(labels.x, labels.y, get_sub_comm))
+}
+
+get_sub_comm <- function(c1, c2) {
+    filter(abun, index %in% c1$label) |>
+        select(index, any_of(c2$label))
+}
+
+sub_taxa_counts <- function(comm) {
+    comm |>
+        mutate(treat=str_extract(index, "[A-Z]+")) %>%
+        split(.$treat) |>
+        map_dbl(~sum(.x[2:(ncol(.x)-1)]))
+}
+
+# Methods for summarizing and inspecting membership blocks------------------------
 hsbm_summary <- function(comm, lvl=0) {
     ret <- comm |>
         filter(level == lvl) |>
@@ -20,55 +61,7 @@ block_members <- function(tidy_member_df, block, level=1, tax_level=NULL) {
     ret
 }
 
-counts_to_matrix <- function(comm_counts) {
-    samp <- unique(comm_counts$block_star)
-    otu <- unique(comm_counts$block_otu)
-    ret <- matrix(comm_counts$counts, nrow=length(otu), ncol=length(samp), dimnames=list(otu, samp))
-    t(ret)
-}
-
-abun_per_taxa <- function(comm) map_dbl(comm[,2:ncol(comm)], sum)
-
-mean_per_taxa <- function(comm) map_dbl(comm[,2:ncol(comm)], mean)
-
-abun_per_sample <- function(abun_df) {
-    ret <- abun_df |>
-        select(2:last_col()) |>
-        rowwise() |>
-        summarize(sum=sum(c_across())) |>
-        pull(sum)
-
-    names(ret) <- abun_df$index
-    return(ret)
-}
-
-num_samples_with_otu <- function(abun_df, otu) {
-    sum(pull(abun_df, otu) > 0)
-}
-
-prob_taxa_in_sample <- function(abun_df) {
-    at <- abun_per_taxa(abun_df)
-    as <- abun_per_sample(abun_df)
-    total <- sum(as)
-    expand_grid(
-        enframe(at/total, "otu", "prop_otu"),
-        enframe(as/total, "sample", "prop_sample")
-    ) |>
-        mutate(prob=1 - exp(-prop_otu*prop_sample))
-}
-
-dissemination <- function(abun_df, comm_df=NULL) {
-    taxa <- colnames(select(comm_df, 2:last_col()))
-    at <- abun_per_taxa(comm_df)
-    st <- map_dbl(taxa, ~num_samples_with_otu(abun_df, .x))
-
-    prob_taxa_in_sample(abun_df) |>
-        group_by(otu) |>
-        summarize(prob_occur=sum(prob)) |>
-        filter(otu %in% taxa) |>
-        mutate(diss_score=st / (prob_occur * at))
-}
-
+# Helpers for entropy analysis----------------------------------------------------
 col_diversity <- function(comm, method="shannon") {
     norm <- function(col) {
         # lc <- ifelse(col > 0, log(col) + 1, 0)
@@ -100,24 +93,4 @@ alpha_diversity <- function(comm, method="shannon") {
 
     as_tibble(t(cmat), .name_repair="minimal") |>
         col_diversity(method)
-    # comm |>
-    #     rowwise() |>
-    #     mutate(tot=sum(c_across(2:last_col()))) |>
-    #     ungroup() |>
-    #     transmute(across(2:last_col(1), ~.x / tot)) |>
-    #     rowwise() |>
-    #     summarize()
-}
-
-connectance <- function(comm) {
-    comm_bin <- ifelse(comm[,2:ncol(comm)] > 0, 1, 0)
-    links <- sum(comm_bin)
-    links / (nrow(comm) * ncol(comm_bin))
-}
-
-sub_taxa_counts <- function(comm) {
-    comm |>
-        mutate(treat=str_extract(index, "[A-Z]+")) %>%
-        split(.$treat) |>
-        map_dbl(~sum(.x[2:(ncol(.x)-1)]))
 }

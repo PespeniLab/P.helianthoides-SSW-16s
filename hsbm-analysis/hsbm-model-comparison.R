@@ -4,7 +4,6 @@ library(reticulate)
 fit <- py_load_object("fit-dict2.pickle", pickle="pickle")
 fit_non_dc <- py_load_object("fit-dict-non-dc2.pickle", pickle="pickle")
 
-# no idea why non-corr ones become NaN
 dls <- bind_rows(
     tibble(model="corr", dls=fit$dls, iter=seq_along(fit$dls)),
     tibble(model="non-corr", dls=fit_non_dc$dls, iter=seq_along(fit_non_dc$dls))
