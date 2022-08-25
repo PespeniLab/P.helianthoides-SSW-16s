@@ -2,6 +2,9 @@ Seastar Wasting. Pichnopodia Helianthoides (Sunflower Sea Sar)
 
 /data/project_data/superss
 
+# .qza files are data files usable as input by qiime2
+# .qzv files are viewable files visualized using https://view.qiime2.org/
+
 conda activate qiime2-2021.8
 export TMPDIR="/data/project_data/16S/tmptmpdir"
 echo $TMPDIR 
@@ -185,7 +188,7 @@ picrust2_pipeline.py -s 1117sswd.fna -i feature-table.biom -o picrust2_out_pipel
 
 
 ### collapsing ASVs to Observabe Taxonomic units (OTU) by Greenegene classification
-### ASVs collapsed to level-7 (species level) as the lowest level of identification by greengenes
+### ASVs collapsed to level-7 (species level) as the lowest level of identification by greengenes.
 
 qiime taxa collapse \
   --i-table table.qza \
@@ -193,4 +196,4 @@ qiime taxa collapse \
   --p-level 7 \
   --o-collapsed-table table-lev7.qza
 
-### table-lev7.qza used to calculate differential taxa abundance using ANCOM-BC in R 
+### Table.qza (ASV) and table-lev7.qza (collapsed to species) used to calculate differential taxa abundance using ANCOM-BC in R
